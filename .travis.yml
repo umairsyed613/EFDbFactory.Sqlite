@@ -9,4 +9,4 @@ language: csharp
 mono: none
 script:
   - sudo snap alias dotnet-sdk.dotnet dotnet
-  - dotnet build Src/EFDbFactory.Sqlite/EFDbFactory.Sqlite.sln
+  - dotnet build Src/EFDbFactory.Sqlite/EFDbFactory.Sqlite.sln --configuration Release
