@@ -8,7 +8,7 @@ namespace EFDbFactory.Sqlite
     public interface IDbFactory : IDisposable
     {
         /// <summary>
-        /// Create a Connection with Transaction level
+        /// Create a Connection with Transaction level, If Factory is created with InMemory Flag transactions will not be used.
         /// </summary>
         /// <param name="isolationLevel"></param>
         /// <returns></returns>
@@ -21,7 +21,7 @@ namespace EFDbFactory.Sqlite
         Task<IDbFactory> CreateReadOnly();
 
         /// <summary>
-        /// Get your context with porvided sql connection and with transaction if factory is transactional
+        /// Get your context with porvided sql connection and with transaction if factory is transactional and non transaction if the factory is pointing to InMemory Database
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>

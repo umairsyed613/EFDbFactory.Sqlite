@@ -1,6 +1,5 @@
 # Entity Framework Core Factory Pattern for Sqlite
 
-# EFDbFactory.Sqlite
 [![Build Status](https://travis-ci.org/umairsyed613/EFDbFactory.Sqlite.svg?branch=master)](https://travis-ci.org/umairsyed613/EFDbFactory.Sqlite)
 
 # Introduction 
@@ -33,6 +32,11 @@ Example 1 (No LoggerFactory)
 Example 2 (With LoggerFactory)
 	services.AddEfDbFactory(Configuration.GetConnectionString("DbConnection"), MyLoggerFactory, true);
 
+Example 3 (No LoggerFactory And InMemory Database)
+    services.AddEfDbFactory("DataSource=:memory:", true));
+
+Example 4 (With LoggerFactory And InMemory Database)
+    services.AddEfDbFactory("DataSource=:memory:"), MyLoggerFactory, true, true);
 ```
 
 Injection in your controller
@@ -48,8 +52,8 @@ ReadWrite Factory
 ```
 public async Task CreateBook(int authorId, string title)
         {
-            using var factory = await factoryConn.Create(IsolationLevel.Snapshot);
-            var context = factory.FactoryFor<BooksDbContext>().GetReadWriteWithDbTransaction();
+            using var factory = await factoryConn.CreateTransactional(IsolationLevel.Snapshot);
+            var context = factory.FactoryFor<BooksDbContext>();
 
             var book = new Book
             {
@@ -65,8 +69,8 @@ Readonly factory
 ```
 public async Task<IEnumerable<Book>> GetAllBooks()
         {
-            using var factory = await factoryConn.Create();
-            var context = factory.FactoryFor<BooksDbContext>().GetReadOnlyWithNoTracking();
+            using var factory = await factoryConn.CreateReadOnly();
+            var context = factory.FactoryFor<BooksDbContext>();
             return context.Book.ToList();
         }
 ```
@@ -74,36 +78,36 @@ public async Task<IEnumerable<Book>> GetAllBooks()
 # Testing
 
 ```
-private static IDbFactory GetNoCommitFactory() => new DbFactory("YourConnectionString").CreateNoCommit().GetAwaiter().GetResult();
+private static IDbFactory GetWritableFactory() => new DbFactory(_connString, true).CreateTransactional().GetAwaiter().GetResult();
 
-[Fact]
-public async Task Test_NoCommitFactory_AutoRollBack()
-{
-    using (var fac = GetNoCommitFactory())
-    {
-        var context = fac.FactoryFor<TestDbContext>().GetReadWriteWithDbTransaction();
+ [Fact]
+        public async Task Test_WritableFactory_AutoRollBack()
+        {
+            using (var fac = GetWritableFactory())
+            {
+                var context = fac.FactoryFor<TestDbContext>();
+                var quiz = new Quiz() { Title = "Test 1" };
+                context.Quiz.Add(quiz);
+                await context.SaveChangesAsync();
 
-        var quiz = new Quiz() {Title = "Test 1"};
-        context.Quiz.Add(quiz);
-        await context.SaveChangesAsync();
+                var q = Assert.Single(context.Quiz.ToList());
+                Assert.NotNull(q);
+                Assert.Equal("Test 1", q.Title);
+            }
 
-        var q = Assert.Single(context.Quiz.ToList());
-        Assert.NotNull(q);
-        Assert.Equal("Test 1", q.Title);
-    }
-
-    using (var fac2 = GetNoCommitFactory())
-    {
-        var context = fac2.FactoryFor<TestDbContext>().GetReadWriteWithDbTransaction();
-        Assert.Empty(context.Quiz.ToList());
-    }
-}
+            using (var fac2 = GetReadonlyFactory())
+            {
+                var context = fac2.FactoryFor<TestDbContext>();
+                Assert.NotEmpty(context.Quiz.ToList());
+                Assert.InRange(context.Quiz.ToList().Count, 1, 1);
+            }
+        }
 
 ```
 
 # Sample Projects
 ```
-You can find sample projects under Src/Samples
+Underdevelopment
 ```
 
 # Feel Free to make it better
