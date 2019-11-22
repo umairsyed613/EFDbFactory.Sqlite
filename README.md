@@ -1,5 +1,8 @@
 # Entity Framework Core Factory Pattern for Sqlite
 
+# EFDbFactory.Sqlite
+[![Build Status](https://travis-ci.org/umairsyed613/EFDbFactory.Sqlite.svg?branch=master)](https://travis-ci.org/umairsyed613/EFDbFactory.Sqlite)
+
 # Introduction 
 Factory Pattern for Entity Framework Core. It helps for multiple EF DbContext with this pattern.
 You can create readonly context and read-write with transaction.
