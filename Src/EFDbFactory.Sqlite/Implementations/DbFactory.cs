@@ -1,53 +1,104 @@
 ﻿using System;
-using System.Data.Common;
-using Microsoft.EntityFrameworkCore;
+using System.Data;
+using System.Threading.Tasks;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 
 namespace EFDbFactory.Sqlite
 {
-    public class DbFactory<T> : IDbFactory<T> where T : CommonDbContext
+    public class DbFactory : IDbFactory
     {
         private readonly string _connectionString;
-        private readonly DbConnection _outerConnection;
-        private readonly DbTransaction _transaction;
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly bool _enableSensitiveDataLogging;
+        private bool _readOnly;
+        private readonly bool _inMemory;
 
-        public DbFactory(string connectionString)
+        public SqliteConnection Connection { get; private set; }
+        public SqliteTransaction Transaction { get; private set; }
+
+        public DbFactory(string connectionString) => _connectionString = connectionString;
+
+        public DbFactory(string connectionString, ILoggerFactory loggerFactory, bool enableSensitiveDataLogging)
         {
             _connectionString = connectionString;
+            _loggerFactory = loggerFactory;
+            _enableSensitiveDataLogging = enableSensitiveDataLogging;
         }
 
-        public DbFactory(DbConnection connection, DbTransaction transaction)
+        public DbFactory(string connectionString, bool inMemory) : this(connectionString)
         {
-            _outerConnection = connection ?? throw new ArgumentNullException(nameof(connection));
-            _transaction = transaction;
+            _inMemory = inMemory;
         }
 
-        public T GetReadOnlyWithNoTracking()
+        public DbFactory(string connectionString, ILoggerFactory loggerFactory, bool enableSensitiveDataLogging, bool inMemory) : this(connectionString, loggerFactory, enableSensitiveDataLogging)
         {
-            var context = CreateDbContext();
-            context.ReadOnlyMode = true;
-            context.ChangeTracker.AutoDetectChangesEnabled = false;
-            context.ChangeTracker.LazyLoadingEnabled = false;
-            context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
-            return context;
+            _inMemory = inMemory;
         }
 
-        public T GetReadWriteWithDbTransaction()
+        /// <summary>
+        /// create factory with desired transaction isolation level.
+        /// </summary>
+        /// <param name="isolationLevel"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public async Task<IDbFactory> CreateTransactional(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted) =>
+            await CreateReadWriteWithTransactionLevel(isolationLevel);
+
+        /// <summary>
+        /// create factory with no transaction
+        /// </summary>
+        /// <returns></returns>
+        public async Task<IDbFactory> CreateReadOnly() => await CreateReadOnlyConnection();
+
+
+        public T FactoryFor<T>()
+        where T : CommonDbContext =>
+            _loggerFactory != null ?
+                (_readOnly ? new ContextCreator<T>(Connection, _loggerFactory, _enableSensitiveDataLogging).GetReadOnlyWithNoTracking(_inMemory) :
+                     new ContextCreator<T>(Connection, Transaction, _loggerFactory, _enableSensitiveDataLogging).GetReadWriteWithDbTransaction(_inMemory)) :
+                (_readOnly ? new ContextCreator<T>(Connection).GetReadOnlyWithNoTracking(_inMemory) :
+                     new ContextCreator<T>(Connection, Transaction).GetReadWriteWithDbTransaction(_inMemory));
+
+        /// <summary>
+        /// Commit the transaction. throw exception when transaction is null. will not commit the transaction if the factory is created CreateNoCommit
+        /// </summary>
+        /// <exception cref="InvalidOperationException"></exception>
+        public void CommitTransaction()
         {
-            var context = CreateDbContext();
-            if (_transaction != null) { context.Database.UseTransaction(_transaction); }
+            if (Transaction == null)
+            {
+                throw new InvalidOperationException("Cannot commit null transaction");
+            }
 
-            context.ChangeTracker.AutoDetectChangesEnabled = true;
-
-            return context;
+            Transaction.Commit();
         }
 
-        private T CreateDbContext()
+        private async Task<IDbFactory> CreateReadWriteWithTransactionLevel(IsolationLevel isolationLevel)
         {
-            var options = new DbContextOptionsBuilder<T>();
+            Connection = new SqliteConnection(_connectionString);
+            await Connection.OpenAsync();
+            Transaction = Connection.BeginTransaction(isolationLevel);
+            _readOnly = false;
+            return this;
+        }
 
-            options = _connectionString != null ? options.UseSqlite(_connectionString) : options.UseSqlite(_outerConnection);
+        private async Task<IDbFactory> CreateReadOnlyConnection()
+        {
+            Connection = new SqliteConnection(_connectionString);
+            await Connection.OpenAsync();
+            Transaction = null;
+            _readOnly = true;
+            return this;
+        }
 
-            return (T) Activator.CreateInstance(typeof(T), options.Options);
+        public void Dispose()
+        {
+            Transaction?.Rollback();
+            Connection?.Close();
+
+            Connection?.Dispose();
+            Transaction?.Dispose();
         }
     }
 }

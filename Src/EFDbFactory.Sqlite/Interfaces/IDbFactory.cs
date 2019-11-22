@@ -1,21 +1,46 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Data;
+using System.Threading.Tasks;
+using Microsoft.Data.Sqlite;
 
 namespace EFDbFactory.Sqlite
 {
-    public interface IDbFactory<out T> where T : CommonDbContext
+    public interface IDbFactory : IDisposable
     {
         /// <summary>
-        /// return readwrite context
+        /// Create a Connection with Transaction level
         /// </summary>
+        /// <param name="isolationLevel"></param>
         /// <returns></returns>
-        T GetReadWriteWithDbTransaction();
+        Task<IDbFactory> CreateTransactional(System.Data.IsolationLevel isolationLevel = IsolationLevel.ReadCommitted);
 
         /// <summary>
-        /// return readonly context with no tracking of your EF entity object
+        /// Create a factory with no transaction
         /// </summary>
         /// <returns></returns>
-        T GetReadOnlyWithNoTracking();
+        Task<IDbFactory> CreateReadOnly();
+
+        /// <summary>
+        /// Get your context with porvided sql connection and with transaction if factory is transactional
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        T FactoryFor<T>() where T : CommonDbContext;
+
+        /// <summary>
+        /// commit transaction when you have done your work. if there is an error in your code the transaction will not be committed. throw InvalidOperationException if the factory is created with no transaction.
+        /// </summary>
+        /// <exception cref="InvalidOperationException"></exception>
+        void CommitTransaction();
+
+        /// <summary>
+        /// return a sqlite connection when factory is being created.
+        /// </summary>
+        SqliteConnection Connection { get; }
+
+        /// <summary>
+        /// return sqlite transaction which is being initialized with factory creation
+        /// </summary>
+        SqliteTransaction Transaction { get; }
     }
 }
