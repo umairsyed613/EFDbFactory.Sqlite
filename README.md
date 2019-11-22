@@ -9,7 +9,7 @@ You can create readonly context and read-write with transaction.
 # How to use it
 
 Inherit your dbcontext with commondbcontext 
-```
+```csharp
 public partial class YourDbContext : CommonDbContext
     {
         public YourDbContext(DbContextOptions<QuizDbContext> options)
@@ -20,12 +20,12 @@ public partial class YourDbContext : CommonDbContext
 ```
 
 Dependency Injection
-```
+```csharp
 services.AddSingleton<IDbFactory, DbFactory>(provider => new DbFactory(connectionString));
 ```
 
 ServiceCollection Extension
-```
+```csharp
 Example 1 (No LoggerFactory)
 	services.AddEfDbFactory(Configuration.GetConnectionString("DbConnection"));
 
@@ -40,7 +40,7 @@ Example 4 (With LoggerFactory And InMemory Database)
 ```
 
 Injection in your controller
-```
+```csharp
 private readonly IDbFactory _factoryConn;
 
 public WriteController(IDbFactory factoryConn)
@@ -49,7 +49,7 @@ public WriteController(IDbFactory factoryConn)
 }
 ```
 ReadWrite Factory
-```
+```csharp
 public async Task CreateBook(int authorId, string title)
         {
             using var factory = await factoryConn.CreateTransactional(IsolationLevel.Snapshot);
@@ -66,7 +66,7 @@ public async Task CreateBook(int authorId, string title)
         }
 ```
 Readonly factory 
-```
+```csharp
 public async Task<IEnumerable<Book>> GetAllBooks()
         {
             using var factory = await factoryConn.CreateReadOnly();
@@ -77,7 +77,7 @@ public async Task<IEnumerable<Book>> GetAllBooks()
 
 # Testing
 
-```
+```csharp
 private static IDbFactory GetWritableFactory() => new DbFactory(_connString, true).CreateTransactional().GetAwaiter().GetResult();
 
  [Fact]
