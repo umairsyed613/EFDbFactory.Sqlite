@@ -12,7 +12,7 @@ Inherit your dbcontext with commondbcontext
 ```csharp
 public partial class YourDbContext : CommonDbContext
     {
-        public YourDbContext(DbContextOptions<QuizDbContext> options)
+        public YourDbContext(DbContextOptions<YourDbContext> options)
             : base(options)
         {
         }
