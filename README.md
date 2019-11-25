@@ -1,6 +1,6 @@
 # Entity Framework Core Factory Pattern for Sqlite
 
-[![Build Status](https://travis-ci.org/umairsyed613/EFDbFactory.Sqlite.svg?branch=master)](https://travis-ci.org/umairsyed613/EFDbFactory.Sqlite)
+[![NuGet version](https://badge.fury.io/nu/EFDbFactory.Sqlite.svg)](https://badge.fury.io/nu/EFDbFactory.Sqlite) [![Build Status](https://travis-ci.org/umairsyed613/EFDbFactory.Sqlite.svg?branch=master)](https://travis-ci.org/umairsyed613/EFDbFactory.Sqlite) [![Nuget downloads (EFDbFactory.Sqlite)](https://img.shields.io/nuget/dt/EFDbFactory.Sqlite)](https://nuget.org/packages/EFDbFactory.Sqlite)
 
 # Introduction 
 Factory Pattern for Entity Framework Core. It helps for multiple EF DbContext with this pattern.
